@@ -1,11 +1,13 @@
 *------------------------------------------------------------------------------*  
 *RANDOMIZE PROGRAM * 
 
-*Authors: 
+*Authors: Steffen Erikson, Qing Liu 
 
-*Date: 
+*Date: 8/26/22
 
-*Purpose: 
+*Purpose: Program to randomly assign participants into treatment conditions. 
+* 		  The program can currently accept categorical blocking variables, 
+*         and level of randomization. 
 
 
 *------------------------------------------------------------------------------*  
@@ -35,15 +37,15 @@ Circumstances
  
 II. NSF Project
 
-Random assignment: Participant level
+Random assignment: Participant level done 
 
-Blocking factor: Sites
+Blocking factor: Sites done 
 
-Blocking variable: Performance scores (continuous)
+Blocking variable: Performance scores (continuous) new function
 
-Number of treatment arms: 2
+Number of treatment arms: 2 eh
 
-Label of treatment conditions: "Treatment" "Control"
+Label of treatment conditions: "Treatment" "Control" 
 
 Randomization could occur at different intervals, but one randomization interval per site
 
@@ -65,7 +67,7 @@ version 17.0
 
 * Program Syntax *
 
-syntax namelist(max=1) [if] [in] [, BY(string) SEED(real 1) ARMS(real 1)]
+syntax namelist(max=1) [if] [in] [, BY(varlist) SEED(real 1) ARMS(real 2) CLUSTER(varlist)]
 
 * REQUIRED  
 *------------------------------------------------------------------------------*                 
@@ -76,9 +78,15 @@ syntax namelist(max=1) [if] [in] [, BY(string) SEED(real 1) ARMS(real 1)]
 *------------------------------------------------------------------------------* 
 * BY - blocking variable(s) (string or factor) | ARMS - treatment_arms (real, default is 2) 
 *------------------------------------------------------------------------------* 
+*------------------------------------------------------------------------------* 
+* CLUSTER (cluster_var)
+*------------------------------------------------------------------------------* 
+
 set trace on 
 
-*Require seed number so replication is possible 
+if "`cluster'" != "" {
+	egen cluster_num=group(`cluster')
+}
 
 if `seed' == 1 {
 	di "Please set seed number for randomization"
@@ -87,36 +95,63 @@ if `seed' == 1 {
 
 set seed `seed'
 
-*Default is two treatment arms 
-if "`1'" == "" {
-	local 1 = 2 
-}
-
 *If there are blocking variables 
 if "`by'" != "" {
-	*Encode BY if BY are string variables (to create indicator variables) 
-	*This step may or may not be necessary
-	foreach v of varlist `by' {   
-			capture confirm numeric variable `v'
+	
+	foreach v of varlist `by' {
+		capture confirm numeric variable `v'
 				if _rc {
-                       encode `v', gen(`v'_2)
-					   drop `v'
-					   rename `v'_2 `v'		   
+					encode `v', gen(`v'_2)
+					drop `v'
+					rename `v'_2 `v'		   
                 }
 	}
-	bysort `by': generate rannum = uniform()  
-	sort `by' rannum
-	tab `by', gen(strata_)
-	by `by': gen `namelist' = mod(_n, `arms')
+	
+	egen strata=group(`by')
+	tab strata, gen(strata_)
+	
+	if "`cluster'" != "" {	
+	
+		bysort strata cluster_num: gen rannum = uniform() 
+		bysort strata cluster_num: replace rannum = rannum[1]
+		sort strata cluster_num rannum
+		by strata: gen `namelist' = mod(cluster_num, `arms')
+	
+	}
+	
+	else {
+		
+		bysort strata: generate rannum = uniform() 
+		sort strata rannum
+		by strata: gen `namelist' = mod(_n, `arms')
+	
+	}
 }
 
 * If there are no blocking variables 
 else {
-	generate rannum = uniform()  
-	sort rannum
-	gen `namelist' = mod(_n, `arms')
+	
+	if "`cluster'" != "" {	
+		
+		bysort cluster_num: gen rannum = uniform() 
+		bysort cluster_num: replace rannum = rannum[1]
+		sort cluster_num rannum
+		gen `namelist' = mod(cluster_num, `arms')
+	
+	}
+	
+	else {
+		
+		generate rannum = uniform()  
+		sort rannum
+		gen `namelist' = mod(_n, `arms')
+	
+	}		
 }
 
+*add randomization date
+gen randomization_dt_ = td(`c(current_date)')
+format randomization_dt %td
 
 end 
 
@@ -127,7 +162,10 @@ end
 
 use "/Users/steffenerickson/Desktop/teach_sim/2021-2022/randomize/Robertson_Randomization_Practice_Data.dta", clear
 
-randomize coaching, by(program) seed(3501) arms(2)
+bysort program: gen cluster_name = mod(_n, 4)
+
+randomize coaching, by(program)  seed(3501) arms(2) cluster(cluster_name)
+
 
 *------------------------------------------------------------------------------*  
 
