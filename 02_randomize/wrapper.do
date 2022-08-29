@@ -1,54 +1,11 @@
-* SPECIFICATIONS * 
-/*
 
-I. Function capabilities
+global programs "/Users/steffenerickson/Desktop/repos/collab_rep_lab/02_randomize"
 
-Level of randomization: student, teachers (classrooms), schools
-Blocking factors:
-Blocking variable: (continuous/categorical)
-Number of treatment arms:
-Label of treatment conditions:
-Create output as a .csv file
-R / STATA
-Check for balance on key covariates
- 
-
-Circumstances
-
-** Uneven participants within blocks
-
-** Waves of randomization -- rolling admission, block randomization
-
- 
-II. NSF Project
-
-Random assignment: Participant level
-
-Blocking factor: Sites
-
-Blocking variable: Performance scores (continuous)
-
-Number of treatment arms: 2
-
-Label of treatment conditions: "Treatment" "Control"
-
-Randomization could occur at different intervals, but one randomization interval per site
-
-Time sensitive
-
-*/
-
-
-global programs "file_path_here"
-
-********************************************************************************
-*------------------------------------------------------------------------------*  
+********************************************************************************  
 *Randomize Function
-*------------------------------------------------------------------------------*  
-
+********************************************************************************  
 
 *syntax namelist(max=1) [if] [in] [, BY(string) SEED(real 1) ARMS(real 1)]
-
 
 * REQUIRED  
 *------------------------------------------------------------------------------*                 
@@ -63,10 +20,9 @@ global programs "file_path_here"
 do "${programs}/randomize.do" 
 
 
-********************************************************************************
-*------------------------------------------------------------------------------*  
-*balance checking 
-*------------------------------------------------------------------------------*  
+********************************************************************************  
+*Balance Checking Function 
+********************************************************************************   
 *Check for balance on key covariates
 
 *syntax varlist(min = 2) [if] [in][, Blocks(varlist) Table(string) Plot(numlist) Export(real 1)]
@@ -86,28 +42,24 @@ do "${programs}/randomize.do"
 * BY - blocking variable(s) (string or factor) | Export(2) to export csv table or plot 
 *------------------------------------------------------------------------------* 
 
-
 do "${programs}/randomize_balance.do"
 
-
-
-
 ********************************************************************************
-*------------------------------------------------------------------------------* 
 *Example 
-*------------------------------------------------------------------------------* 
+********************************************************************************
 
-use "/Users/steffenerickson/Desktop/collab_rep_lab/2021-2022/randomize/Robertson_Randomization_Practice_Data.dta", clear
-
-randomize coaching, by(program) seed(3501) arms(2) //randomize function 
+use "/Users/steffenerickson/Desktop/teach_sim/2021-2022/randomize/Robertson_Randomization_Practice_Data.dta", clear
 
 
-*Data Managment - get rid of or necessary evil? 
+bysort program: gen cluster_name = mod(_n, 4) //creating clusters for randomization
+randomize coaching, by(program) seed(3501) arms(2) 
+
+*Data Managment 
 local covariates futeaach futearace futeases ///
 	                 fustuach fusturace fustuses ///
 					 hsach hsrace hsses hsloc ///
 					 hstypeother hstype holangother ///
-					 holang faedu moedu partch	
+					 holang faedu moedu partch gender
 
 * Generating variables
 foreach cov in `covariates' {
@@ -117,10 +69,9 @@ tab `cov', gen(`cov')
 
 
 *Balance Checking Fuction 
-local covariates "faedu1 faedu2 faedu3 faedu4 faedu5 moedu1 moedu2 moedu3 moedu4 moedu5"
-local blocks 
+local covariates moedu1 gender1 partch1 hstype1 hsses1 hsrace1
 
-ttest_cov_unwt coaching `covariates',b(`blocks') t(balance_table) p(".1 .1 .1 .1")
+balance_check coaching `covariates',b(i.strata) t(balance_table) p("-.1 .1 .8 1.2")  // export(2)
 
 
 
