@@ -61,14 +61,11 @@ Time sensitive
 
 cap program drop randomize
 program randomize
-
 version 17.0
-
 
 * Program Syntax *
 
 syntax namelist(max=1) [if] [in] [, BY(varlist) SEED(real 1) ARMS(real 2) CLUSTER(varlist)]
-
 * REQUIRED  
 *------------------------------------------------------------------------------*                 
 *treatment variable (namelist = 1) | SEED (real, defult of 1 will break program) |
@@ -84,28 +81,18 @@ syntax namelist(max=1) [if] [in] [, BY(varlist) SEED(real 1) ARMS(real 2) CLUSTE
 
 set trace on 
 
-if "`cluster'" != "" {
-	egen cluster_num=group(`cluster')
-}
-
 if `seed' == 1 {
 	di "Please set seed number for randomization"
 	exit
 }
-
 set seed `seed'
+
+if "`cluster'" != "" {
+	egen cluster_num=group(`cluster')
+}
 
 *If there are blocking variables 
 if "`by'" != "" {
-	
-	foreach v of varlist `by' {
-		capture confirm numeric variable `v'
-				if _rc {
-					encode `v', gen(`v'_2)
-					drop `v'
-					rename `v'_2 `v'		   
-                }
-	}
 	
 	egen strata=group(`by')
 	tab strata, gen(strata_)
@@ -150,7 +137,7 @@ else {
 }
 
 *add randomization date
-gen randomization_dt_ = td(`c(current_date)')
+gen randomization_dt = td(`c(current_date)')
 format randomization_dt %td
 
 end 
@@ -159,13 +146,12 @@ end
 
 *------------------------------------------------------------------------------*  
 * EXAMPLE *
-
+/*
 use "/Users/steffenerickson/Desktop/teach_sim/2021-2022/randomize/Robertson_Randomization_Practice_Data.dta", clear
 
 bysort program: gen cluster_name = mod(_n, 4)
-
-randomize coaching, by(program)  seed(3501) arms(2) cluster(cluster_name)
-
+randomize coaching, by(program) seed(3501) arms(2) cluster(cluster_name)
+*/
 
 *------------------------------------------------------------------------------*  
 
