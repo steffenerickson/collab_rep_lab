@@ -15,9 +15,10 @@
 	-----------------------
 	
 	
-	STEP (1) - Rename this do file and describe the file(s) you are cleaning 
+	STEP (1) - Rename this do file and describe the file(s) you are cleaning  
 	
-	STEP (2) - Specify your directories and assign import commands to globals 
+	STEP (2) - Specify your directories (by choosing local person) 
+	and assign import commands to globals 
 
 	STEP (3) - Rename the variables that you want to keep. Adjust 
 	the keep command to keep only the variables that you renamed. Qualtrics variables 
@@ -36,18 +37,38 @@
 *------------------------------------------------------------------------------*
 * STEP (2)  Specify your directories and program set up 
 *------------------------------------------------------------------------------*
-clear all 
-cap log close 
 
-global root_drive "/Users/steffenerickson/Desktop/teach_sim/2021-2022/survey"
-global raw "raw_data"
-global clean "clean_data"
+* File path switch - type your name (lowercase) within the parentheses
+*----------------------*
+local person "steffen" 
+*----------------------*
+
+if "`person'" == "steffen" {
+global root_drive "/Users/steffenerickson/Box Sync/Project SimTeacher/9. Data (SimTeacher)/2021-22"
+global raw "data/raw_data"
+global clean "data/clean_data"
 global results "results"
+
+}
+if "`person" == "poppy" {
+global root_drive 
+global raw "data/raw_data"
+global clean "data/clean_data"
+global results "results"
+}
+if "`person'" == "josh"{
+global root_drive 
+global raw "data/raw_data"
+global clean "data/clean_data"
+global results "results"
+}
+
+clear all 
+cap log close
 
 *Log file and change directory 
 log using ${results}/feedback.smcl, replace 
-cd ${root_drive}
-
+cd "${root_drive}"
 
 *Raw Data File - Write full import command and assign to global
 global fe_uva_post import excel using ///
@@ -58,9 +79,7 @@ global fe_rgv_smu_post import excel using ///
 "${raw}/RGV SMU Family Engagement Post-Simulation Survey.xlsx", ///
 sheet("in") firstrow case(lower)  clear 
 
-
 foreach i in 1 2  {
-	
 	if `i' == 1 {
 		local name = "UVA_FE_Post-Survey_clean.dta"
 		local time = 2
@@ -70,7 +89,6 @@ foreach i in 1 2  {
 		local name = "RGV_SMU_FE_Post-Survey_clean.dta"
 		local time = 2
 		$fe_rgv_smu_post
-
 	}	
 	
 drop in 1/2
@@ -78,7 +96,6 @@ drop in 1/2
 *------------------------------------------------------------------------------*
 * STEP (3)  Rename Variables  
 *------------------------------------------------------------------------------*
-	
 rename recipientemail	 email
 rename progress          progress 
 rename finished          finished
@@ -217,11 +234,9 @@ drop if dup >1
 drop progress dup
 
 *Generate Composite Scores 
-	
 *----------------*
 * manage_scale *
 *----------------*
-
 #delimit ; 
 local varlist app_coach_stu app_adjust_expect app_guidance_couns 
 app_rec_sped app_discp_refer app_confer_stu app_confer_parent 
@@ -254,7 +269,6 @@ egen manage_app_punitive=rowmean(app_discp_refer app_rec_sped);
 *----------------------*
 * iowa_connors_scale * 
 *----------------------*
-
 foreach var of varlist beh* {
 	replace `var' = subinstr(`var', " ", "", .)
 	destring `var', replace 
@@ -286,7 +300,6 @@ label var beh_rating "Iowa Connors Overall";
 *---------------*
 * tses_scale * 
 *---------------*
-
 * Creating scales for TSES
 destring tse_*, replace
 egen tses_se= rowmean(tse_01 tse_02 tse_04 tse_06 tse_09 tse_12 tse_14 tse_22)
@@ -302,13 +315,11 @@ rename tse_13 tses_13
 rename tse_15 tses_15
 rename tse_16 tses_16
 rename tse_19 tses_19
-rename tse_21 tses_21 	
-  	
- 
+rename tse_21 tses_21 
+		
 *--------------------------------------------*
 *Generate time variable for appending surveys
 *--------------------------------------------*
-	
 gen time = `time'
 
 *--------------------------------------------*
@@ -333,11 +344,11 @@ replace me_post_coach=5 if me_post_coach==29
 * Step (5)  Label Variables
 *------------------------------------------------------------------------------*
 
+* label var progress "describe variable here"
+
 *------------------------------------------------------------------------------*
 * Step (6)  Descriptive Statistics 
 *------------------------------------------------------------------------------*
-
-
 di "*--------------------------------------------------------------------------*"
 di "data file `name'"
 di "*--------------------------------------------------------------------------*"
@@ -349,7 +360,6 @@ tses_cm tses_overall
 di "*--------------------------------------------------------------------------*"
 
 save "${clean}/`name'", replace
-
 
 }
 

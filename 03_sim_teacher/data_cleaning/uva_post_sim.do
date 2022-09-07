@@ -16,7 +16,8 @@
 	
 	STEP (1) - Rename this do file and describe the file(s) you are cleaning  
 	
-	STEP (2) - Specify your directories and assign import commands to globals 
+	STEP (2) - Specify your directories (by choosing local person) 
+	and assign import commands to globals 
 
 	STEP (3) - Rename the variables that you want to keep. Adjust 
 	the keep command to keep only the variables that you renamed. Qualtrics variables 
@@ -36,18 +37,36 @@
 * STEP (2)  Specify your directories and program set up 
 *------------------------------------------------------------------------------*
 
-clear all 
-cap log close 
+* File path switch - type your name (lowercase) within the parentheses
+*----------------------*
+local person "steffen" 
+*----------------------*
 
-global root_drive "/Users/steffenerickson/Desktop/teach_sim/2021-2022/survey"
-global raw "raw_data"
-global clean "clean_data"
+if "`person'" == "steffen" {
+global root_drive "/Users/steffenerickson/Box Sync/Project SimTeacher/9. Data (SimTeacher)/2021-22"
+global raw "data/raw_data"
+global clean "data/clean_data"
 global results "results"
+}
+if "`person" == "poppy" {
+global root_drive 
+global raw "data/raw_data"
+global clean "data/clean_data"
+global results "results"
+}
+if "`person'" == "josh"{
+global root_drive 
+global raw "data/raw_data"
+global clean "data/clean_data"
+global results "results"
+}
+
+clear all 
+cap log close
 
 *Log file and change directory 
 log using ${results}/uva_sim_survey.smcl, replace 
-cd ${root_drive}
-
+cd "${root_drive}"
 
 *Raw Data File - Write full import command and assign to global
 global uva_base import excel using ///
@@ -58,9 +77,7 @@ global uva_exit import excel using ///
 "${raw}/2021-2022 TeachSIM Exit Post-Simulation Survey_June 20, 2022_11.02.xlsx", ///
 sheet("in") firstrow case(lower) clear 
 	
-foreach x in 1 2  {
-	
-	
+foreach x in 1 2  {	
 	if `x' == 1 {
 		$uva_base // Imports file 
 		local name = "UVA_Baseline_Post-Survey_clean.dta"
@@ -87,7 +104,6 @@ foreach x in 1 2  {
 	}	
 
 drop in 1/2	
-
 *------------------------------------------------------------------------------*
 * STEP (3)  Rename Variables  
 *------------------------------------------------------------------------------*
@@ -155,7 +171,6 @@ rename q`g'_10      	  base_post_fb_didthink
 rename q`y'         	  base_post_fb_notinclude
 rename q`b'         	  base_post_fb_wtinclude           
 
-
 *Keeping only the needed variables 
 
 #delimit ; 
@@ -178,7 +193,6 @@ keep progress finished firstname lastname email
 	 base_post_fb_wtinclude;           
 #delimit cr
 
-
 *------------------------------------------------------------------------------*
 * STEP (4)  Cleaning and Creating Composite Variables 
 *------------------------------------------------------------------------------*
@@ -186,7 +200,6 @@ keep progress finished firstname lastname email
 *----------------*
 *Cleaning Emails
 *----------------*
-
 drop if email==""
 replace email=lower(email)
 replace email=strtrim(email)
@@ -198,7 +211,6 @@ drop if dup >1
 drop progress dup
 
 *Generate Composite Scores 
-
 *----------------*
 * manage_scale *
 *----------------*
@@ -235,7 +247,6 @@ egen manage_app_punitive=rowmean(app_discp_refer app_rec_sped);
 *----------------------*
 * iowa_connors_scale * 
 *----------------------*
-
 foreach var of varlist beh* {
 	replace `var' = subinstr(`var', " ", "", .)
 	destring `var', replace 
@@ -266,19 +277,16 @@ label var beh_rating "Iowa Connors Overall";
 *--------------------------------------------*
 *Generate time variable for appending surveys
 *--------------------------------------------*
-	
 gen time = `time'
 	
 *------------------------------------------------------------------------------*
 * Step (5)  Label Variables
 *------------------------------------------------------------------------------*
 	
-
+* label var progress "describe variable here"
 *------------------------------------------------------------------------------*
 * Step (6)  Descriptive Statistics 
 *------------------------------------------------------------------------------*
-
-
 
 di "*--------------------------------------------------------------------------*"
 di "data file : `name'"
@@ -292,11 +300,7 @@ di "*--------------------------------------------------------------------------*
 
 save "${clean}/`name'", replace
 
-
-
 }
-
-
 
 log close
 log translate ${results}/uva_sim_survey.smcl ${results}/uva_sim_survey.txt, replace
