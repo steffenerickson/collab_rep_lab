@@ -9,77 +9,27 @@
 * 		  The program can currently accept categorical blocking variables, 
 *         and level of randomization. 
 
-
-*------------------------------------------------------------------------------*  
-
-*------------------------------------------------------------------------------*  
-* SPECIFICATIONS * 
-/*
-
-I. Function capabilities
-
-Level of randomization: student, teachers (classrooms), schools
-Blocking factors:
-Blocking variable: (continuous/categorical)
-Number of treatment arms:
-Label of treatment conditions:
-Create output as a .csv file
-R / STATA
-Check for balance on key covariates
- 
-
-Circumstances
-
-** Uneven participants within blocks
-
-** Waves of randomization -- rolling admission, block randomization
-
- 
-II. NSF Project
-
-Random assignment: Participant level done 
-
-Blocking factor: Sites done 
-
-Blocking variable: Performance scores (continuous) new function
-
-Number of treatment arms: 2 eh
-
-Label of treatment conditions: "Treatment" "Control" 
-
-Randomization could occur at different intervals, but one randomization interval per site
-
-Time sensitive
-
-*/
-
-
-*------------------------------------------------------------------------------*  
-
 *------------------------------------------------------------------------------*  
 * RANDOMIZE PROGRAM * 
-
+*------------------------------------------------------------------------------*  
 cap program drop randomize
-program randomize
+program randomize , rclass 
 version 17.0
 
 * Program Syntax *
 
-syntax namelist(max=1) [if] [in] [, BY(varlist) SEED(real 1) ARMS(real 2) CLUSTER(varlist)]
-* REQUIRED  
-*------------------------------------------------------------------------------*                 
-*treatment variable (namelist = 1) | SEED (real, defult of 1 will break program) |
-*------------------------------------------------------------------------------*  
+syntax namelist(max=1) [if] [in] [, BY(varlist) SEED(real 1) ARMS(real 2) CLUSTER(varlist) GENFILE(varlist)]
 
+* REQUIRED                
+* 	namelist(max=1)  - treatment variable program will generate  
+* 	seed (real, default of 1 will break program) - seed for randomization
 * OPTIONAL 
-*------------------------------------------------------------------------------* 
-* BY - blocking variable(s) (string or factor) | ARMS - treatment_arms (real, default is 2) 
-*------------------------------------------------------------------------------* 
-*------------------------------------------------------------------------------* 
-* CLUSTER (cluster_var)
-*------------------------------------------------------------------------------* 
-
-set trace on 
+* 	by (varlist) - blocking variable(s) 
+* 	arms (real, default is 2) - treatment_arms 
+* 	cluster (cluster_var) - will assign treatment conditions to whole cluster
+*	genfile(unique participant id)	-creates .csv with randomization information 
+*------------------------------------------------------------------------------*  
+quietly {
 
 if `seed' == 1 {
 	di "Please set seed number for randomization"
@@ -136,28 +86,41 @@ else {
 	}		
 }
 
-*add randomization date
+drop rannum
 gen randomization_dt = td(`c(current_date)')
 format randomization_dt %td
+
+if "`by'" != "" {
+	global table1 table strata `namelist'
+}
+else {
+	global table1 table `namelist'
+}
+
+if "`genfile'" ! = "" {
+	
+	#delimit ;
+	local logdate : di %tdCYND daily("$S_DATE", "DMY");
+	
+	outsheet `genfile' 
+			 `by' 
+			 `cluster' 
+			 `namelist' 
+			 strata*
+			 randomization_dt
+			 using "randomization_`logdate'.csv" 
+			 ,comma replace;
+	#delimit cr
+}
+
+}
+
+display c(current_date)
+$table1
 
 end 
 
 *------------------------------------------------------------------------------*  
-
-*------------------------------------------------------------------------------*  
-* EXAMPLE *
-/*
-use "/Users/steffenerickson/Desktop/teach_sim/2021-2022/randomize/Robertson_Randomization_Practice_Data.dta", clear
-
-bysort program: gen cluster_name = mod(_n, 4)
-randomize coaching, by(program) seed(3501) arms(2) cluster(cluster_name)
-*/
-
-*------------------------------------------------------------------------------*  
-
-********************
-*Check balance Command
-
 
 
 

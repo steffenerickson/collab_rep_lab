@@ -7,46 +7,28 @@
 
 *Purpose: Program to check balance after randomization. 
 
-
 *------------------------------------------------------------------------------*  
-
-*------------------------------------------------------------------------------*  
-* SPECIFICATIONS * 
-/* 
-
-	The program currently produces a balance table and/or an 
-	effect size/variance plot
-	We still need to add joint F-test 
-
-*/ 
-*------------------------------------------------------------------------------*  
-
+* Balance Check Program 
 *------------------------------------------------------------------------------*  
 
 cap prog drop balance_check
 set more off
 program balance_check, rclass
 
+*Program Syntax *
 
-syntax varlist(min = 2) [if] [in][, Blocks(varlist fv) Table(string) Plot(numlist) Export(real 1)]
+syntax varlist(min = 2) [if] [in][, Blocks(varlist fv) Plot(numlist) Export(string)]
 marksample touse
 
-* REQUIRED  
-*------------------------------------------------------------------------------*                 
-* varlist (1st position is treatment variable, 2..n are covariates)
-*------------------------------------------------------------------------------*  
-*------------------------------------------------------------------------------*                 
-*table or plot or both 
-*table("table name") to create balance table
-*plot("std_es_lowerbound std_es_upperbound variance_lowerbound variance_upperbound")
-*------------------------------------------------------------------------------* 
-
+* REQUIRED                 
+* 	varlist(min =2 ) - 1st position is treatment variable, 2..n are covariates             
 * OPTIONAL 
-*------------------------------------------------------------------------------* 
-* BY - blocking variable(s) (string or factor) | Export(2) to export csv table or plot 
+* 	by - blocking variable(s) (string or factor) 
+*   plot("std_es_lowerbound std_es_upperbound variance_lowerbound variance_upperbound")
+*	export(table/plot name) to export csv table or plot 
 *------------------------------------------------------------------------------* 
 
-
+quietly {
 
 tokenize `varlist'
 local n : word count `varlist'	
@@ -71,9 +53,7 @@ forvalues v = 2/`n' {
 	else {  
 		matrix Balance1= Balance1\row`i'
 	}
-	
 	local++i 
-	
 	} 
 
 	matrix colnames Balance1 = "Control" "Treatment Difference" "SE" "P-value"
@@ -98,8 +78,7 @@ forvalues v = 2/`n' {
 	scalar coach_var =(tr_var/co_var) //ratio of the variances 
 	scalar tr_sd=sqrt(tr_var)
 	scalar co_sd=sqrt(co_var)
-			
-							
+								
 	matrix row`i' = (coach_es,coach_var,tr_sd,co_sd)
 	matrix rownames row`i' = "`:word `v' of `varlist''"
 	
@@ -109,14 +88,11 @@ forvalues v = 2/`n' {
 	else {  
 		matrix Balance2 = Balance2\row`i'
 	}
-
 	local++i
 }
 	
 	matrix colnames Balance2 = "std_es" "variance" "tr_sd" "co_sd"
-	
 	matrix Balance3 = (Balance1,Balance2)
-	
 	local r = rowsof(Balance3) 
 	local c = colsof(Balance3) 
 		
@@ -126,27 +102,34 @@ forvalues v = 2/`n' {
 			
 			}
 		}
-
-
+		
+	*Joint F Test 
+	local treatment = "`:word 1 of `varlist''"
+	local result: list varlist - treatment
+	
+	mvreg `result' = `1' `blocks'
+	test `1'
+	
+	matrix JointF = (r(df), r(df_r), r(F), r(p))'
 	
 	#delimit ; 
+	matrix rownames JointF = "test constraints d_fr"
+							 "residual d_fr"
+							 "F statistic"
+							 "two-sided p-value";
+
 	matrix colnames Balance3 = "Control" 
 							   "Treatment Difference" 
-							   "SE" 
-							   "P-value"
+							   "SE of Difference" 
+							   "P-value of Difference T-Test"
 							   "STD Effect Size"
 							   "Variance Ratio (Tr/Co)"
 							   "Treatment SE"
 							   "Control SE";
 	#delimit cr
-
-if "`table'" != "" {
-	esttab matrix(Balance3) 
-}
-	
+	matrix Balance3 = (Balance3[1...,1..2], Balance3[1...,5..8], Balance3[1...,3..4])
 
 if "`plot'" != "" {			
-	
 	preserve
 	
 	local rownames: rowfullnames Balance2 // This block of code coverts the 
@@ -161,9 +144,8 @@ if "`plot'" != "" {
 	
 	encode variable, gen(nvariable)
 	tempfile data1
-	
 	tokenize `plot'
-	
+
 	#delimit ; 
 	graph twoway 
 	(scatter variance std_es if std_es <= `2'  & std_es >= `1' & variance >`3' 
@@ -176,35 +158,30 @@ if "`plot'" != "" {
 	mcolor(red) msymbol(circle_hollow) mlabel(nvariable) 
 	mlabs(tiny) mlabposition(12)) , 
 
-	xline(`2', lpattern(dot) lwidth(vthin)) 
-	xline(`1', lpattern(dot) lwidth(vthin)) 
-	yline(`3', lpattern(dot) lwidth(vthin)) 
-	yline(`4', lpattern(dot) lwidth(vthin)) 
+	xline(`2', lpattern(solid) lwidth(vthin)) 
+	xline(`1', lpattern(solid) lwidth(vthin)) 
+	yline(`3', lpattern(solid) lwidth(vthin)) 
+	yline(`4', lpattern(solid) lwidth(vthin)) 
 	legend(off) xtitle(Effect Size Difference) ytitle(Variance Ratio) 
 	title(RCT Balance Plot);	
 	#delimit cr 
-
-
 	restore 
-	
 }
 	
-if `export' == 2  {
-	
-	if "`table'" != "" {
-		esttab matrix(Balance3) using `table'.csv,replace
-	}
+if "`export'" != ""  {
 	if "`plot'" != "" {	
-		graph export balance_plot.pdf
+		esttab matrix(Balance3) using `export'.csv,replace
+		graph export `export'_plot.pdf, replace 
 	}
 	else {
-		di "Neither table or plot option specified"
+		esttab matrix(Balance3) using `export'.csv,replace
 	}
 	
 }
-
-		
-return list 
+}
+	esttab matrix(Balance3) 
+	esttab matrix(JointF)	
+	return list 
 
 end
 
