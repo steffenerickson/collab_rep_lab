@@ -97,16 +97,21 @@ else {
 	global table1 table `namelist'
 }
 
-if "`genfile'" ! = "" {
+if "`genfile'" != "" {
 	
+	
+	local logdate : di %tdCYND daily("$S_DATE", "DMY")
+	
+	if "`by'" != "" {
+		local strata strata* 	
+	}
+
 	#delimit ;
-	local logdate : di %tdCYND daily("$S_DATE", "DMY");
-	
 	outsheet `genfile' 
 			 `by' 
 			 `cluster' 
 			 `namelist' 
-			 strata*
+			 `strata'
 			 randomization_dt
 			 using "randomization_`logdate'.csv" 
 			 ,comma replace;
