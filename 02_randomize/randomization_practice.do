@@ -57,7 +57,7 @@ title("Blocking on Two Baseline Covariates")
 * Randomization
 *------------------------------------------------------------------------------*
 
-randomize coaching, by(block) arms(2) seed(3501) 
+randomize coaching, arms(2) by(grp) seed(3501) limit(16) lcondition(1)
 
 *------------------------------------------------------------------------------*
 * Check Balance 
