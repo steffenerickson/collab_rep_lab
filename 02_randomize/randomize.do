@@ -87,9 +87,10 @@ if `limit' !=1 {
 		
 		scalar b = (2 * `limit') / factor_combinations
 		if mod(b,1) > 0 {
-			b = floor(b)
+			scalar b = floor(b)
 			di b
 		}
+
 		if b < factor_combinations {
 			di "At least 1 observation per block needs to be assigned to the treatment condition"
 			exit
@@ -127,7 +128,7 @@ if `limit' !=1 {
 			gen `namelist' = l 
 			drop rannum 
 			tempfile data2
-			save `data2'
+			save `data2'		
 		restore 
 		preserve
 			local b = 2 * `limit'
@@ -141,6 +142,8 @@ if `limit' !=1 {
 	}
 	use `data1' , clear 
 }
+
+
 *------------------------------------------------------------------------------*
 if "`cluster'" != "" {
 	egen cluster_num=group(`cluster')
@@ -180,8 +183,9 @@ else {
 	}		
 }
 
-if `limit' !=1 {
-	append using `data2'
+
+if `limit' !=1 { 
+	append using `data2', force
 }
 
 drop rannum
