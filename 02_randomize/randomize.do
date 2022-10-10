@@ -24,16 +24,18 @@ version 17.0
 
 * Program Syntax *
 
-syntax namelist(max=1) [if] [in] [, BY(varlist) SEED(real 1) ARMS(real 2) CLUSTER(varlist) GENFILE(varlist) LIMIT(real 1) LCONDITION(real 1)]
+syntax namelist(max=1) [if] [in] [, ID(varlist) BY(varlist) SEED(real 1) ARMS(real 2) CLUSTER(varlist) GENFILE(varlist) LIMIT(real 1) LCONDITION(real 1)]
 
 * REQUIRED                
 * 	namelist(max=1)  - treatment variable program will generate  
 * 	seed (real, default of 1 will break program) - seed for randomization
+*  	id(max =1) - unique identifier for an observation
 * OPTIONAL 
 * 	by (varlist) - blocking variable(s) 
 * 	arms (real, default is 2) - treatment_arms 
 * 	cluster (cluster_var) - will assign treatment conditions to whole cluster
-*	genfile(unique participant id)	-creates .csv with randomization information 
+*	genfile(varlist) -creates .csv with variables included in varlist 
+*   namelist, id, by, and cluster are kept by default
 *	limit(real, default is 1) -Can specify max number of tretment allocations
 * 	lcondtion - conditon that you are restricting. 1 is default and will limit
 *	the number of treatment conditions assigned. 0 will limit the number of
@@ -46,7 +48,10 @@ if `seed' == 1 {
 	exit
 }
 
-set seed `seed'
+if "`id'" == "" {
+	di "Please specify an ID Variable"
+	exit
+}
 
 *------------------------------------------------------------------------------*
 *New code - should be written as a subrountine 
@@ -142,29 +147,34 @@ if "`cluster'" != "" {
 }
 
 if "`by'" != "" {
+	set seed `seed'
 	egen strata=group(`by')
 	tab strata, gen(strata_)
 	if "`cluster'" != "" {	
-		bysort strata cluster_num: gen rannum = uniform() 
+		sort strata cluster_num `id'
+		bysort strata cluster_num: gen rannum = runiform() 
 		bysort strata cluster_num: replace rannum = rannum[1]
 		sort strata cluster_num rannum
 		by strata: gen `namelist' = mod(cluster_num, `arms')
 	}
 	else {
-		bysort strata: generate rannum = uniform() 
+		sort strata `id'
+		bysort strata: generate rannum = runiform() 
 		sort strata rannum
 		by strata: gen `namelist' = mod(_n, `arms')
 	}
 }
 else {
 	if "`cluster'" != "" {	
-		bysort cluster_num: gen rannum = uniform() 
+		sort cluster_num `id'
+		bysort cluster_num: gen rannum = runiform() 
 		bysort cluster_num: replace rannum = rannum[1]
 		sort cluster_num rannum
 		gen `namelist' = mod(cluster_num, `arms')
 	}
 	else {
-		generate rannum = uniform()  
+		sort `id'
+		generate rannum = runiform()  
 		sort rannum
 		gen `namelist' = mod(_n, `arms')
 	}		
@@ -191,7 +201,7 @@ if "`genfile'" != "" {
 		local strata strata* 	
 	}
 	#delimit ;
-	outsheet `genfile' `by' `cluster' `namelist' `strata' randomization_dt
+	outsheet  `id' `genfile' `by' `cluster' `namelist' `strata' randomization_dt
 			  using "randomization_`logdate'.csv" 
 			  ,
 			  comma replace;
