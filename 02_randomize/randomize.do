@@ -58,10 +58,10 @@ if "`id'" == "" {
 if `limit' !=1 {	
 	
 	if `lcondition' == 1 {
-		scalar l = 0
+		scalar tr_status = 0
 	}
 	if `lcondition' == 0 {
-		scalar l = 1
+		scalar tr_status = 1
 	}
 	
 	if "`by'" != ""{
@@ -86,7 +86,7 @@ if `limit' !=1 {
 		
 		
 		scalar b = (2 * `limit') / factor_combinations
-		if mod(b,1) > 0 {
+		if mod(b,1) > 0 { //check for a decimal 
 			scalar b = floor(b)
 			di b
 		}
@@ -100,12 +100,12 @@ if `limit' !=1 {
 		preserve
 			bysort `by': gen rannum = uniform() 
 			sort  `by' rannum
-			bysort `by' : gen index = _n
-			drop if index <= `b'
 			egen strata=group(`by')
 			tab strata, gen(strata_)
-			gen `namelist' = l 
-			drop rannum index
+			bysort `by' : gen index = _n
+			keep if index > `b'
+			gen `namelist' = tr_status
+			drop rannum index 
 			tempfile data2
 			save `data2'
 		restore 
@@ -125,7 +125,7 @@ if `limit' !=1 {
 			gen rannum = uniform() 
 			sort  rannum
 			drop  in 1/`b'
-			gen `namelist' = l 
+			gen `namelist' = tr_status 
 			drop rannum 
 			tempfile data2
 			save `data2'		
