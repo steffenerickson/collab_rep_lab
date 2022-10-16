@@ -98,7 +98,9 @@ if `limit' !=1 {
 
 		local b b 
 		preserve
-			bysort `by': gen rannum = uniform() 
+			set seed `seed'
+			sort `by' `id'
+			bysort `by': gen rannum = runiform() 
 			sort  `by' rannum
 			egen strata=group(`by')
 			tab strata, gen(strata_)
@@ -110,7 +112,9 @@ if `limit' !=1 {
 			save `data2'
 		restore 
 		preserve
-			bysort `by': gen rannum = uniform() 
+			set seed `seed'
+			sort `by' `id'
+			bysort `by': gen rannum = runiform() 
 			sort  `by' rannum
 			bysort `by' : gen index = _n
 			keep if index <= `b'
@@ -121,8 +125,10 @@ if `limit' !=1 {
 	}
 	else {
 		preserve
+			set seed `seed'
 			local b = 2 * `limit'
-			gen rannum = uniform() 
+			sort `id'
+			gen rannum = runiform() 
 			sort  rannum
 			drop  in 1/`b'
 			gen `namelist' = tr_status 
@@ -131,8 +137,10 @@ if `limit' !=1 {
 			save `data2'		
 		restore 
 		preserve
+			set seed `seed'
 			local b = 2 * `limit'
-			gen rannum = uniform() 
+			sort `id'
+			gen rannum = runiform() 
 			sort  rannum
 			keep in 1/`b'
 			drop rannum 
@@ -168,6 +176,7 @@ if "`by'" != "" {
 	}
 }
 else {
+	set seed `seed'
 	if "`cluster'" != "" {	
 		sort cluster_num `id'
 		bysort cluster_num: gen rannum = runiform() 
