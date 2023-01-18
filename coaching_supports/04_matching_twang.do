@@ -172,15 +172,6 @@ foreach j in 1 2 4 5 {
 	esttab mat(balance`j') using balance`j'.csv , replace
 }
 
-use data_ipw_full_twang.dta, clear 
-global model_covariates ///
-i.ra_coaching i.block_encoded ///
-ccs_gpa_c moedu_colab female race_wh score_dc_avg_bs_c crtse_total_c ///
-ccs_gpa_im female_im race_wh_im score_dc_avg_bs_im crtse_total_im
-
-recode block_encoded (. = 0)
-
-
 
 
 
