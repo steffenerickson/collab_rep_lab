@@ -101,7 +101,6 @@ frame performancetask  {
 	}
 
 }
-
 * collapse mqi data 
 frame mqi  {
 	foreach v of var * {				//copy variable labels 
@@ -115,10 +114,8 @@ frame mqi  {
         label var `v' "`l`v''"
 	}
 }
-
 * keep final self efficacy measure 
 frame finalsurvey: keep coaching participantid site section semester d126_1_2-d126_6_2
-
 * Merge files 
 frame full_outcome {
 	local dataframes performancetask mqi finalsurvey
@@ -136,17 +133,36 @@ frame full_outcome {
 	drop if coaching == . 
 }
 frame drop performancetask mqi finalsurvey
-
-
 frame dir 
-frame change outcome_full
+frame change full_outcome
 *save ${data_drive}/full_outcome.dta, replace // uncomment to save 
 *export excel ${data_drive}/full_outcome.xlsx, replace firstrow(variables) // uncomment to save  
 
 
 
 
+			****** Access variables from linked frames *******
+						
+frame copy nsf_baseline_data baseline, replace 
+frame copy performancetask_and_baseline performancetask , replace 
+frame copy mqi_and_baseline mqi, replace 
+frame copy finalsurvey_and_baseline finalsurvey, replace 						
 
+frame mqi: frlink describe link2
+
+// make a copy of content score variable and add it to the mqi data frame 
+frame mqi : frget d921, from(link2) suffix(a)
+frame mqi : sum d921a
+
+// make an alias of the content score variable and add it to the mqi data frame 
+frame mqi : fralias add  d921, from(link2)  suffix(b)
+frame mqi : fralias describe  
+frame mqi : sum d921b
+
+
+// function to access variables in other frames 
+frame mqi : generate d921c = frval(link2, d921)  
+frame mqi : sum d921c
 
 
 

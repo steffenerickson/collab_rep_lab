@@ -70,8 +70,6 @@ frame nsf_baseline_data {
 do code/11_simrubric_cleaning.do
 
 * Data Verification 
-
-* Check assignments vs collected data 
 frame simse_performance_tasks {
 gen id_check = _n
 bysort participantid site semester rater task time: replace id_check = id_check[1]
@@ -80,7 +78,7 @@ egen dupes = tag(id_check)
 drop if dupes == 0
 drop id_check dupes 
 }
-* now checking for dupilcates by dc variable instead of rater 
+* now checking for duplicates by dc variable instead of rater 
 frame simse_performance_tasks {
 gen id_check = _n
 bysort participantid site semester dc task time: replace id_check = id_check[1]
@@ -191,6 +189,7 @@ frame drop nsf_fall_baseline_data ///
 frame dir    
 		   
 frame performancetask_and_baseline : frlink m:1 participantid semester site, frame(nsf_baseline_data)  generate(link1)
+
 frame mqi_and_baseline : frlink m:1 participantid semester site, frame(nsf_baseline_data)  generate(link2)
 frame costi_and_baseline : frlink m:1 participantid semester site, frame(nsf_baseline_data)  generate(link3)
 frame finalsurvey_and_baseline  : drop if participantid == ""
